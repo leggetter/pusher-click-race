@@ -1,0 +1,87 @@
+<html>
+  <head>
+    <script src="public/js/libs.js"></script>
+    <script src="public/js/PusherDummy.js"></script>
+    <script src="public/js/Race.js"></script>
+  </head>
+  <body>
+    <script>
+      var Pusher = com.pusher.test.framework.Pusher;
+    
+      function assert(assertion, msg) {
+        msg = msg || "";
+        if(!assertion) {
+          throw "Assertion false: " + msg;
+        }
+        else {
+          console.log("Assertion true: " + msg)
+        }
+      };
+      
+      var test = {}
+      
+      test.can_access_pusher_instance_via_PusherDummy_static_array = function() {
+        var pusher = new Pusher();
+        var instance = Pusher.instances[0];
+        assert(pusher === instance, "instances are equal");
+      }
+    
+      test.can_create_dummy_as_normal_Pusher = function() {
+        var pusher = new Pusher();
+        assert(pusher instanceof com.pusher.test.framework.Pusher, "pusher is an instance of com.pusher.test.framework.Pusher");
+      };
+      
+      test.can_trigger_event_on_channel = function() {
+        var pusher = new Pusher();
+        var channel = pusher.subscribe('channel');
+        var actualEventData = null;
+        var eventDataToSend = "hello";
+        channel.bind('update', function(data) {
+          actualEventData = data;
+        });
+        channel.dispatch('update', "hello")
+        
+        assert(actualEventData === eventDataToSend, "eventData has been set by dispatch call");
+      };
+      
+      test.subscription_succeeded_Pusher_event_triggers_spectators_updated_event = function() {
+        var race = new com.pusher.clickrace.Race();
+        var count = 0;
+        race.bind('spectators-updated', function(info){
+          count = info.count;
+        });
+        
+        var raceChannel = race._$getRaceChannel();
+        var members = new com.pusher.test.framework.Members();
+        members.add({"id": "someId", "name": "Phil"});
+        members.add({"id": "anotherId", "name": "Dave"});        
+        raceChannel.dispatch('pusher:subscription-succeeded', members)
+        
+        assert(count === 2, "spectators-updated event has been triggered by pusher:subscription-succeeded");
+      };
+      
+      test.member_added_triggers_spectators_updated_event = function() {
+        var race = new com.pusher.clickrace.Race();
+        var count = 0;
+        race.bind('spectators-updated', function(info){
+          count = info.count;
+        });
+        
+        var raceChannel = race._$getRaceChannel();
+        var member = {id: "fish", info: {"name": "Dave"}};
+        raceChannel.dispatch("pusher:member-added", member);
+        
+        assert(count > 0, "spectators-updated event has been triggered by pusher:member-added");
+      };
+      
+      for(var testName in test) {
+        var testCase = test[testName];
+        if(typeof testCase == "function") {
+          console.log("---------------------");
+          console.log("Starting: \"" + testName + "\":");
+          testCase();
+        }
+      }
+    </script>
+  </body>
+</html>
